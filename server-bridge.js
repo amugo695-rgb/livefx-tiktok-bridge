@@ -1,18 +1,19 @@
+
+const http = require('http');
 const WebSocket = require('ws');
 const { WebcastPushConnection } = require('tiktok-live-connector');
 
 const USERNAME = process.env.TIKTOK_USER;
 const PORT = Number(process.env.PORT) || 8080;
 
-if (!USERNAME) {
-  throw new Error('Falta configurar la variable TIKTOK_USER en Render');
-}
+const httpServer = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('LiveFX TikTok Bridge is running');
+});
 
-const server = new WebSocket.Server({ port: PORT });
+const wss = new WebSocket.Server({ server: httpServer });
 
-console.log(`Servidor WebSocket iniciado en el puerto ${PORT}`);
-
-server.on('connection', (socket) => {
+wss.on('connection', (socket) => {
   socket.send(JSON.stringify({
     type: 'status',
     message: 'Conectado al servidor LiveFX'
@@ -31,48 +32,31 @@ function broadcast(event, data = {}) {
     timestamp: Date.now()
   });
 
-  server.clients.forEach((client) => {
+  wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
   });
 }
 
-async function start() {
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor iniciado en el puerto ${PORT}`);
+});
+
+if (!USERNAME) {
+  console.error('Falta configurar TIKTOK_USER en Render');
+} else {
   const live = new WebcastPushConnection(USERNAME);
 
   live.on('connected', () => {
     console.log('Conectado a TikTok LIVE');
   });
 
-  live.on('chat', (data) => {
-    broadcast('chat', data);
-  });
-
-  live.on('gift', (data) => {
-    broadcast('gift', data);
-  });
-
-  live.on('like', (data) => {
-    broadcast('like', data);
-  });
-
-  live.on('member', (data) => {
-    broadcast('member', data);
-  });
-
-  live.on('social', (data) => {
-    broadcast('social', data);
-  });
-
-  try {
-    await live.connect();
-    console.log(`Conexión iniciada para ${USERNAME}`);
-  } catch (error) {
-    console.error('Error al conectar con TikTok LIVE:', error.message);
+  for (const event of ['chat', 'gift', 'like', 'member', 'social']) {
+    live.on(event, (data) => broadcast(event, data));
   }
-}
 
-start().catch((error) => {
-  console.error('Error al iniciar el servidor:', error);
-});
+  live.connect().catch((error) => {
+    console.error('Error al conectar con TikTok LIVE:', error.message);
+  });
+}
