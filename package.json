@@ -1,0 +1,14 @@
+
+{
+  "name": "livefx-tiktok-bridge",
+  "version": "1.0.0",
+  "description": "Puente de eventos de TikTok LIVE para LiveFX Studio",
+  "main": "server-bridge.js",
+  "scripts": {
+    "start": "node server-bridge.js"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "^2.1.0",
+    "ws": "^8.18.0"
+  }
+}
