@@ -1,4 +1,3 @@
-
 const WebSocket = require('ws');
 const { WebcastPushConnection } = require('tiktok-live-connector');
 
